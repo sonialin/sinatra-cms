@@ -36,6 +36,17 @@ def create_file(file_name)
   File.write(file_path, "w")
 end
 
+def signed_in?
+  session[:username]
+end
+
+def require_sign_in
+  if !signed_in?
+    session[:message] = "You need to sign in to do that."
+    redirect "/"
+  end
+end
+
 get "/" do
   @files = Dir.glob(full_data_path + "/*").map {|path| File.basename(path)}
   headers["Content-Type"] = "text/html;charset=utf-8"
@@ -54,33 +65,41 @@ get "/files/:file_name" do
 end
 
 get "/new" do
+  require_sign_in
+
   erb :new
 end
 
 post "/new" do
+  require_sign_in
+
   file_name = params[:file_name]
   if file_name != ""
     create_file(file_name)
-    session[:message] = "The file #{file_name} has been created."
+    session[:message] = "#{file_name} has been created."
     redirect "/"
   else
-    session[:message] = "The file name cannot be empty."
     status 422
+    session[:message] = "File name cannot be empty."
     erb :new
   end
 end
 
-get "/files/:file_name/edit" do 
+get "/files/:file_name/edit" do
+  require_sign_in
+
   @file_name = params[:file_name]
-  file_path = full_data_path + "/" + @file_name
+  file_path = File.join(full_data_path, @file_name)
   @content = File.read(file_path)
   erb :edit
 end
 
-post "/files/:file_name/edit" do 
+post "/files/:file_name/edit" do
+  require_sign_in
+
   file_name = params[:file_name]
   content = params[:content]
-  file_path = full_data_path + "/" + file_name
+  file_path = File.join(full_data_path, file_name)
   
   File.write(file_path, content)
 
@@ -89,6 +108,8 @@ post "/files/:file_name/edit" do
 end
 
 post "/files/:file_name/delete" do
+  require_sign_in
+
   file_name = params[:file_name]
   file_path = File.join(full_data_path, file_name)
 
